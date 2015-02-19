@@ -1,0 +1,4 @@
+1c1
+< Invalid syntax at (15,1), ;
+---
+> Invalid syntax at (0,0), null

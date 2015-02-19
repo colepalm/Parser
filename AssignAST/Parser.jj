@@ -1,0 +1,103 @@
+PARSER_BEGIN(Parser)
+import ast.*;
+public class Parser {
+  public static void main(String[] args) {
+     new Parser(System.in);
+     try {
+       Expr e = Top();
+       new IndentOutput(System.out).indent(e);
+     } catch (ParseException e) {
+       System.out.println("Invalid syntax at ("
+                          + token.beginColumn + ","
+                          + token.beginLine + "), "
+                          + token.image);
+     } catch (TokenMgrError e) {
+       System.out.println(e.getMessage());
+     }
+  }
+}
+PARSER_END(Parser)
+
+//- Parser Functions --------------------------------------------------
+
+Expr Top() : { Expr e; } {
+  e=As() <EOF> 
+  { return e; }
+}
+
+Expr As(): { Token t; Expr n; } {
+  LOOKAHEAD(3)
+    t=<IDENT> ("=" n=As()) { return new Assign(t.image, n); }
+  | n = Or()  { return n; } 
+}
+
+Expr Or() : { Expr n, m; } {
+  n=And() ("||" m=Or() { n = new LOr(n,m); })*
+  { return n; }
+}
+
+Expr And() : { Expr n, m; } {
+   n=Comp() ("&&" m=And() { n = new LAnd(n,m); })*
+   {return n;}
+}
+
+Expr Comp() : { Expr n, m; } {
+   n=E() ( ("<" m=E()  { n = new Lt(n,m); }) 
+         | ("<=" m=E() { n = new Lte(n,m);}) 
+         | (">" m=E()  { n = new Gt(n,m); }) 
+         | (">=" m=E() { n = new Gte(n,m);}) 
+         | ("==" m=E() { n = new Eql(n,m);}) 
+         | ("!="m=E()  { n = new Neq(n,m);}))? 
+   { return n; }
+}
+
+Expr E()   : { Expr n, m; } { 
+  n=P() ( ("+" m=P() { n = new Add(n,m); })
+        | ("-" m=P() { n = new Sub(n,m); }))*
+  { return n; }
+}
+
+Expr P()   : { Expr n, m; } { 
+   n=A() ( ("*" m=A()   { n = new Mul(n,m); })
+         | ("/" m = A() { n = new Div(n,m); }))*
+   { return n; }               
+}
+
+Expr A()   : { Expr n; } { 
+  ( "(" n = Or() ")"  
+  |  n = I())
+  { return n; }           
+}
+Expr I()   : { Token t; } { 
+    ( t = <INTLIT> { return new IntLit(Integer.parseInt(t.image)); })  
+  | ( t = <IDENT>  { return new Id(t.image)             ; })
+  {  }  
+}
+
+
+//- Lexical Rules -----------------------------------------------------
+
+
+
+SKIP : {
+  " "
+| "\t"
+| "\n"
+| "\r"
+| <"//" (~["\n","\r"])* ("\n" | "\r" | "\r\n")>
+| <"/*" (~["*"])* ("*" | ~["*","/"] (~["*"])* "*")* "/">
+}
+
+// Lexemes that should be reported as valid tokens:
+TOKEN : {
+  <INTLIT    : <ZERO> | <POSDIGIT> (<DIGIT>)*>
+| <#POSDIGIT : ["1"-"9"]>
+| <#ZERO     : "0">
+| <#DIGIT    : <ZERO> | <POSDIGIT> >
+}
+
+TOKEN: {
+  <IDENT     :    ["a"-"z"] (["a"-"z","A"-"Z","0"-"9","_"])*>
+}
+
+

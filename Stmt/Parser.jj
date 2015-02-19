@@ -1,0 +1,111 @@
+PARSER_BEGIN(Parser)
+
+public class Parser {
+  public static void main(String[] args) {
+     new Parser(System.in);
+     try {
+       Top();
+       System.out.println("Valid syntax");
+     } catch (ParseException e) {
+       System.out.println("Invalid syntax at ("
+                          + token.beginColumn + ","
+                          + token.beginLine + "), "
+                          + token.image);
+     } catch (TokenMgrError e) {
+       System.out.println(e.getMessage());
+     }
+  }
+}
+PARSER_END(Parser)
+
+//- Parser Functions --------------------------------------------------
+
+void Top(): { } {
+  Semi() <EOF>
+}
+
+void Semi(): { } {
+  (Stmt())? ";"
+}
+
+void Stmt(): { } {
+  ( "print" (Or())?
+  | "return" (Or())?
+  | ("while" | "if") Test()  
+  | Assign()    
+  )
+}
+/*void Stmt1(): { } {
+  LOOKAHEAD(1)
+  ( "{" Block()    
+  | "print" <IDENT>
+  | ("int" | "boolean") <IDENT>
+  | "return" <IDENT>  
+  | ("if" | "while") Test()
+  | Expr())
+  ";"  
+}*/
+
+void Block(): { } {
+  "{" (Stmt())* "}"
+}
+
+void Test(): { } {
+  "("Or()")" Stmt() (";")? ("else" Stmt())? 
+}
+
+void Assign(): { } {
+  LOOKAHEAD(2)
+  ( <IDENT> ("=" Assign()))
+  | Or() 
+}
+
+void Or() : { } {
+   And () ("||" Or())*
+}
+
+void And() : { } {
+   Comp() ("&&" And())*
+}
+
+void Comp() : { } {
+   E() ( ("<" E()) | ("<=" E()) | (">" E()) | (">=" E()) | ("==" E()) | ("!="E()) )? 
+}
+
+void E()   : { } { 
+  P() ( ("+" P()) | ("-" P()))* 
+}
+
+void P()   : { } { 
+  A() ("*" A() | "/" A())*                
+}
+
+void A()   : { } { 
+  "(" Assign() ")"  |  I()           
+}
+void I()   : { } { 
+  <INTLIT> | <IDENT>            
+}
+//-- Define the lexical structure of an input language: ----------------------
+
+// Input elements that should be ignored/skipped:
+SKIP : {
+  " "
+| "\t"
+| "\n"
+| "\r"
+| <"//" (~["\n","\r"])* ("\n" | "\r" | "\r\n")>
+| <"/*" (~["*"])* ("*" | ~["*","/"] (~["*"])* "*")* "/">
+}
+
+// Lexemes that should be reported as valid tokens:
+TOKEN : {
+  <INTLIT    : <ZERO> | <POSDIGIT> (<DIGIT>)*>
+| <#POSDIGIT : ["1"-"9"]>
+| <#ZERO     : "0">
+| <#DIGIT    : <ZERO> | <POSDIGIT> >
+}
+
+TOKEN: {
+  <IDENT     :    ["a"-"z"] (["a"-"z","A"-"Z","0"-"9","_"])*>
+}
